@@ -13,12 +13,13 @@ int    R; // the length of the simulation (in bit time units), say, 5,000,000 bi
 int    T; // the number of trials (say, 5), followed by seeds for the trials.
 
 void setArgs(int argc, char** argv){
-    if (argc != 9) {
+    cout << argc << endl;
+    if (argc != 10) { // 9 args, 1 for current command
         cout << "Requires 9 input arguments. M A K F e B N R T" << endl;
         // explode and exit here
     } else {
-        cout << argv[2] << endl;
-        //M = argv[2];
+        cout << argv[1] << endl;
+        // M = argv[1];
     }
 }
 
