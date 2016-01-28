@@ -40,7 +40,7 @@ void print_ci(vector<double> xi, double mean);
 double get_mean(vector<double> items);
 
 //temp function for throughput
-double get_throughput(int frames_ok);
+double get_throughput(int frames_ok, int bit_time_remaining);
 
 
 int main (int argc, char** argv) {  
@@ -68,7 +68,7 @@ int main (int argc, char** argv) {
         int FK = F/K;
         int r = (FK == 1 ? 2 : (FK >= 5 ? 4 : 3));
         
-        while (bit_time_remaining > 0){
+        while (bit_time_remaining > F){
             bit_time_remaining -= F + A; // reduce time remaining by frame size.
             retransmit = false;
             
@@ -108,7 +108,7 @@ int main (int argc, char** argv) {
         frame_transmission_averages.push_back(((double)frames_sent)/((double)frames_ok));
         
         // Get throughput for this trial
-        throughputs.push_back(get_throughput(frames_ok));
+        throughputs.push_back(get_throughput(frames_ok, bit_time_remaining));
         
         
         
@@ -135,7 +135,6 @@ int main (int argc, char** argv) {
 
 
 void setArgs(int argc, char** argv){
-    cout << argc << endl;
     if (argc < 11) { 
         cout << "Requires at least 11 input arguments. M A K F e B N R T S S ..." << endl;
         exit(1);
@@ -212,9 +211,9 @@ bool burst_error(){
         return false;
 }
 
-double get_throughput(int frames_ok){
+double get_throughput(int frames_ok, int bit_time_remaining){
     //F * the total number of correctly recived frames / total time required to correctly recive frames
-    return  (((double)F) * ((double)frames_ok)) / ((double)R);
+    return  (((double)F) * ((double)frames_ok)) / (((double)R) - ((double)bit_time_remaining));
 }
 
 double get_mean(vector<double> items){
