@@ -1,30 +1,173 @@
+#include <cstdlib>
 #include <iostream>
+#include <cstring>
+#include <vector> 
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 
-char   M; // the error model used: “I” for Independent, “B” for Burst.
+int    M; // the error model used: “I” (73) for Independent, “B” (66) for Burst. (in ascii)
 int    A; // the feedback time, say, 50 bit time units.
 int    K; // the number of blocks. Choose K such that F is a multiple of K. K = 0, 1, 2, 10, 40, 100, 400, 1000.
 int    F; // the size of a frame, say, 4000 bits.
-double e; // the probability of a bit in error. e = 0.0001, 0.0003, 0.0005, 0.0007, 0.001.
+double E, e; // the starting probability of a bit in error. e = 0.0001, 0.0003, 0.0005, 0.0007, 0.001.
 int    B; // burst length.  0 for the independent model.  For the burst model, set this to 50 and 500 bit times.
 int    N; // non-burst length.  0 for the independent model.  For the burst model, set this to 5000 and 1000 bit times.
 int    R; // the length of the simulation (in bit time units), say, 5,000,000 bit time units. R should be long enough for stable results.
 int    T; // the number of trials (say, 5), followed by seeds for the trials.
+vector<int> S; // the random seeds for reach trial.
 
-void setArgs(int argc, char** argv){
-    cout << argc << endl;
-    if (argc != 10) { // 9 args, 1 for current command
-        cout << "Requires 9 input arguments. M A K F e B N R T" << endl;
-        // explode and exit here
-    } else {
-        cout << argv[1] << endl;
-        // M = argv[1];
-    }
-}
+void setArgs(int argc, char** argv);
+
+// see if there is an error
+bool get_error();
+
+//temp function for indepdent trial
+bool independent_error();
+
+//temp function for burst trial
+bool burst_error();
+
+//temp function for get confidence intervel 
+void get_ci();
+
 
 int main (int argc, char** argv) {  
     setArgs(argc, argv);
     cout << "Hello Cmput 313 Assignment 1!\n";
+    
+    int frames_ok = 0;
+    int frames_sent = 0;
+    
+    for (int s : S) { // Will exec T times.
+        srand(s);
+        e = E;
+        frames_ok = 0;
+        frames_sent = 0;
+        int bit_time_remaining = R;
+        bool retransmit = false;
+        int errors = 0;
+        int FK = F/K;
+        int r = (FK == 1 ? 2 : (FK >= 5 ? 4 : 3));
+        
+        while (bit_time_remaining > 0){
+            bit_time_remaining -= F + A; // reduce time remaining by frame size.
+            retransmit = false;
+            
+            // frame transmission
+            for(int i = 0; i < K; i++){
+                
+                // block transmission
+                errors = 0;
+                for(int j = 0; j < (FK+r); j++){
+                    if (get_error()){
+                        ++errors;
+                    }
+                }
+                
+                // irrecoverable error in block.
+                if(errors > 1){
+                    retransmit = true;
+                }
+            }
+            
+            // frame sent correctly?
+            if (retransmit == false){
+                ++frames_ok;
+            }
+            
+            // update total
+            ++frames_sent;
+            
+        }
+        
+        // trial finished.
+        cout << frames_sent << " frames sent, " << frames_ok << " arrived ok." << endl;    
+    }
+    
+    
+    
     return 0;
+}
+
+
+
+
+void setArgs(int argc, char** argv){
+    cout << argc << endl;
+    if (argc < 11) { 
+        cout << "Requires at least 11 input arguments. M A K F e B N R T S S ..." << endl;
+        exit(1);
+    } else {
+        M = (int)argv[1][0];
+        A = stoi(argv[2]);
+        K = stoi(argv[3]);
+        F = stoi(argv[4]);
+        E = stof(argv[5]);
+        B = stoi(argv[6]);
+        N = stoi(argv[7]);
+        R = stoi(argv[8]);
+        T = stoi(argv[9]);
+        for (int i = 10; i < 10 + T; i++){
+            if(i < argc){
+                S.push_back(stoi(argv[i]));
+            } else {
+                S.push_back(S[0]);
+            }
+        }
+    }
+}
+
+bool get_error(){
+    //independent or burst
+    switch(M){
+        case 73: /* I */ return independent_error(); break;
+        case 66: /* B */ 
+        default : return burst_error(); break;
+    }
+}
+
+//temp function for indepdent trial
+bool independent_error(){
+    
+    //floating double between 0 and 1
+    double bernoulli = static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+    
+    if (bernoulli <= E){
+        return true;
+    }
+    return false;
+}
+
+
+// for burst trial
+int burst_period_counter = 0;
+int bursting_errors = false;
+
+bool burst_error(){
+        ++burst_period_counter;
+        
+        if(bursting_errors && burst_period_counter > B){
+            bursting_errors = false;
+            burst_period_counter = 0;
+        } else if (!bursting_errors && burst_period_counter > N){
+            bursting_errors = true;
+            burst_period_counter = 0;
+        }
+        
+        if(bursting_errors){
+        
+            e = E * ((N + B) / B);
+            
+            //floating double between 0 and 1
+            double bernoulli = static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+            
+        
+            if (bernoulli <= e){
+                return true;
+            }
+        }
+        
+        return false;
 }
