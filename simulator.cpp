@@ -4,6 +4,7 @@
 #include <vector> 
 #include <stdlib.h>
 #include <time.h>
+#include <cmath>
 
 using namespace std;
 
@@ -29,8 +30,17 @@ bool independent_error();
 //temp function for burst trial
 bool burst_error();
 
+// standard deviation
+double std_dev(vector<double> xi, double mean);
+
 //temp function for get confidence intervel 
-void get_ci();
+void print_ci(vector<double> xi, double mean);
+
+//temp function for get average
+double get_mean(vector<double> items);
+
+//temp function for throughput
+double get_throughput(int frames_ok);
 
 
 int main (int argc, char** argv) {  
@@ -39,6 +49,13 @@ int main (int argc, char** argv) {
     
     int frames_ok = 0;
     int frames_sent = 0;
+    int average_ok = 0;
+    
+    vector<double> frame_transmission_averages;
+    vector<double> throughputs;
+    
+    double mean_frame_transmissions = 0;
+    double mean_throughputs = 0;
     
     for (int s : S) { // Will exec T times.
         srand(s);
@@ -80,11 +97,34 @@ int main (int argc, char** argv) {
             // update total
             ++frames_sent;
             
+            //update average ok frames
+            average_ok = average_ok + frames_ok;
         }
         
         // trial finished.
         cout << frames_sent << " frames sent, " << frames_ok << " arrived ok." << endl;    
+        
+        // Get frames sent for this trial
+        frame_transmission_averages.push_back(((double)frames_sent)/((double)frames_ok));
+        
+        // Get throughput for this trial
+        throughputs.push_back(get_throughput(frames_ok));
+        
+        
+        
     }
+    
+    double throughput_average = get_mean(throughputs);
+    double frame_average_mean = get_mean(frame_transmission_averages);
+    
+    cout << frame_average_mean << " ";
+    print_ci(frame_transmission_averages, frame_average_mean);
+    cout << endl;
+    
+    cout << throughput_average << " ";
+    print_ci(throughputs, throughput_average);
+    cout << endl;
+    
     
     
     
@@ -170,4 +210,45 @@ bool burst_error(){
         }
         
         return false;
+}
+
+double get_throughput(int frames_ok){
+    //F * the total number of correctly recived frames / total time required to correctly recive frames
+    return  (((double)F) * ((double)frames_ok)) / ((double)R);
+}
+
+double get_mean(vector<double> items){
+    double sum = 0;
+    for (double x : items) { 
+        sum += x;
+    }
+    return sum / (double)items.size();
+}
+
+double std_dev(vector<double> xi, double mean){
+    double square_sum = 0;
+    for (double x : xi) { 
+        square_sum += (x - mean) * (x - mean);   
+    }
+    return sqrt(square_sum / (T - 1));
+}
+
+void print_ci(vector<double> xi, double mean){
+    // t-statistics from https://surfstat.anu.edu.au/surfstat-home/tables/t.php
+    vector<double> t_val = {
+        0, // undefined
+        12.71, // df 1
+        4.303,  // df 2
+        3.181, // df 3
+        2.776, // df 4
+        2.571, // df 5
+        2.447, // df 6
+        2.365, // df 7
+        2.306, // df 8
+        2.262, // df 9
+        2.228  // df 10
+    };
+    double s = std_dev(xi, mean);
+    double ci = t_val[T-1] * s / sqrt((double)T);
+    cout << "(" << mean - ci << ", " << mean + ci << ")";
 }
