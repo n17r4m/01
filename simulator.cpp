@@ -44,9 +44,13 @@ double get_throughput(int frames_ok, int bit_time_remaining);
 
 
 int main (int argc, char** argv) {  
-    setArgs(argc, argv);
-    cout << "Hello Cmput 313 Assignment 1!\n";
     
+    setArgs(argc, argv);
+    /*
+    cout << (M==66?"B":"I") << " " << A << " " << K << " " << F << " " << E << " " << B << " " << N << " " << R << " " << T;
+    for (int s : S) { cout << " " << s; }
+    cout << endl;
+    */
     int frames_ok = 0;
     int frames_sent = 0;
     int average_ok = 0;
@@ -65,15 +69,17 @@ int main (int argc, char** argv) {
         int bit_time_remaining = R;
         bool retransmit = false;
         int errors = 0;
-        int FK = F/K;
-        int r = (FK == 1 ? 2 : (FK >= 5 ? 4 : 3));
+        int FK = K == 0 ? F : F/K;
+        int r = K == 0 ? 0 : (int) ceil(log( ((double)F) + ((double)K) / ((double)K) ) / log(2.0));
+        
+        //if K = 0 then r = 0
         
         while (bit_time_remaining > F){
             bit_time_remaining -= F + A; // reduce time remaining by frame size.
             retransmit = false;
             
             // frame transmission
-            for(int i = 0; i < K; i++){
+            for(int i = 0; i < (K||1); i++){
                 
                 // block transmission
                 errors = 0;
@@ -102,7 +108,7 @@ int main (int argc, char** argv) {
         }
         
         // trial finished.
-        cout << frames_sent << " frames sent, " << frames_ok << " arrived ok." << endl;    
+        // cout << frames_sent << " frames sent, " << frames_ok << " arrived ok." << endl;    
         
         // Get frames sent for this trial
         frame_transmission_averages.push_back(((double)frames_sent)/((double)frames_ok));
@@ -119,7 +125,7 @@ int main (int argc, char** argv) {
     
     cout << frame_average_mean << " ";
     print_ci(frame_transmission_averages, frame_average_mean);
-    cout << endl;
+    cout << "\t"; //<< endl;
     
     cout << throughput_average << " ";
     print_ci(throughputs, throughput_average);
