@@ -19,38 +19,26 @@ int    R; // the length of the simulation (in bit time units), say, 5,000,000 bi
 int    T; // the number of trials (say, 5), followed by seeds for the trials.
 vector<int> S; // the random seeds for reach trial.
 
+
 void setArgs(int argc, char** argv);
-
-// see if there is an error
 bool get_error();
-
-//temp function for indepdent trial
 bool independent_error();
-
-//temp function for burst trial
 bool burst_error();
-
-// standard deviation
 double std_dev(vector<double> xi, double mean);
-
-//temp function for get confidence intervel 
-void print_ci(vector<double> xi, double mean);
-
-//temp function for get average
 double get_mean(vector<double> items);
-
-//temp function for throughput
 double get_throughput(int frames_ok, int bit_time_remaining);
+void print_ci(vector<double> xi, double mean);
 
 
 int main (int argc, char** argv) {  
     
     setArgs(argc, argv);
-    /*
+    
+    // display arguments.
     cout << (M==66?"B":"I") << " " << A << " " << K << " " << F << " " << E << " " << B << " " << N << " " << R << " " << T;
-    for (int s : S) { cout << " " << s; }
+    for (int s : S) { cout << " " << s; } // T = count(S)
     cout << endl;
-    */
+    
     int frames_ok = 0;
     int frames_sent = 0;
     int average_ok = 0;
@@ -71,8 +59,6 @@ int main (int argc, char** argv) {
         int errors = 0;
         int FK = K == 0 ? F : F/K;
         int r = K == 0 ? 0 : (int) ceil(log( ((double)F) + ((double)K) / ((double)K) ) / log(2.0));
-        
-        //if K = 0 then r = 0
         
         while (bit_time_remaining > F){
             bit_time_remaining -= F + A; // reduce time remaining by frame size.
@@ -120,27 +106,26 @@ int main (int argc, char** argv) {
         
     }
     
+    // compute the values
     double throughput_average = get_mean(throughputs);
     double frame_average_mean = get_mean(frame_transmission_averages);
     
+    // print outputs
     cout << frame_average_mean << " ";
     print_ci(frame_transmission_averages, frame_average_mean);
-    cout << "\t"; //<< endl;
+    cout << endl;
     
     cout << throughput_average << " ";
     print_ci(throughputs, throughput_average);
     cout << endl;
     
-    
-    
-    
+    // all done :)
     return 0;
 }
 
 
-
-
 void setArgs(int argc, char** argv){
+    // handle the argument line. throw stuff into global variable.
     if (argc < 11) { 
         cout << "Requires at least 11 input arguments. M A K F e B N R T S S ..." << endl;
         exit(1);
@@ -154,18 +139,19 @@ void setArgs(int argc, char** argv){
         N = stoi(argv[7]);
         R = stoi(argv[8]);
         T = stoi(argv[9]);
+        srand(time(NULL));
         for (int i = 10; i < 10 + T; i++){
             if(i < argc){
                 S.push_back(stoi(argv[i]));
             } else {
-                S.push_back(S[0]);
+                S.push_back(rand());
             }
         }
     }
 }
 
+//generic trial. chose between independent or burst
 bool get_error(){
-    //independent or burst
     switch(M){
         case 73: /* I */ return independent_error(); break;
         case 66: /* B */ 
@@ -173,7 +159,7 @@ bool get_error(){
     }
 }
 
-//temp function for indepdent trial
+// independent trial
 bool independent_error(){
     
     //floating double between 0 and 1
@@ -193,6 +179,7 @@ int bursting_errors = false;
 bool burst_error(){
         ++burst_period_counter;
         
+        // determine if we are in a burst period
         if(bursting_errors && burst_period_counter > B){
             bursting_errors = false;
             burst_period_counter = 0;
@@ -217,12 +204,17 @@ bool burst_error(){
         return false;
 }
 
+
 double get_throughput(int frames_ok, int bit_time_remaining){
-    //F * the total number of correctly recived frames / total time required to correctly recive frames
+    // F * the total number of correctly recived frames
+    // ----------------------------------------------- 
+    // total time required to correctly recive frames
     return  (((double)F) * ((double)frames_ok)) / (((double)R) - ((double)bit_time_remaining));
 }
 
+
 double get_mean(vector<double> items){
+    // returns the mean
     double sum = 0;
     for (double x : items) { 
         sum += x;
@@ -230,13 +222,16 @@ double get_mean(vector<double> items){
     return sum / (double)items.size();
 }
 
+
 double std_dev(vector<double> xi, double mean){
+    // returns standard deviation
     double square_sum = 0;
     for (double x : xi) { 
         square_sum += (x - mean) * (x - mean);   
     }
     return sqrt(square_sum / (T - 1));
 }
+
 
 void print_ci(vector<double> xi, double mean){
     // t-statistics from https://surfstat.anu.edu.au/surfstat-home/tables/t.php
